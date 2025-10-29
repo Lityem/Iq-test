@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IQ-Style Logic Quiz (Educational)</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#121a2b; --ink:#e6e9f2; --muted:#9aa3b2;
+    --primary:#7c9cff; --accent:#22c55e; --warn:#fbbf24; --danger:#ef4444;
+    --ring:rgba(124,156,255,.35)
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 16px; color:var(--ink);
+    background:linear-gradient(180deg,#0b1220,#0f172a);
+    font:500 16px/1.6 ui-sans-serif,system-ui,Segoe UI,Roboto,Ubuntu,Apple Color Emoji,Segoe UI Emoji;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:auto}
+  .card{
+    background:var(--card); border:1px solid rgba(255,255,255,.07);
+    border-radius:16px; padding:22px 20px; box-shadow:0 12px 32px rgba(0,0,0,.28)
+  }
+  h1{margin:0 0 6px; font-size:28px}
+  .sub{margin:0 0 14px; color:var(--muted)}
+  .badge{display:inline-flex;gap:8px;align-items:center;background:var(--accent);color:#071016;
+    font-weight:800;font-size:12px;letter-spacing:.3px;border-radius:999px;padding:6px 10px;margin:8px 0 16px}
+  .disclaimer{
+    background:rgba(251,191,36,.08);border:1px dashed rgba(251,191,36,.45);
+    color:#fde68a; padding:10px 12px; border-radius:12px; font-size:14px; margin:8px 0 18px
+  }
+  .progress{display:flex;align-items:center;gap:12px;margin:12px 0 18px}
+  .bar{flex:1;height:10px;background:#0b1020;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+  .bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--primary),#b79cff);transition:width .25s ease}
+  .q{padding-top:12px;border-top:1px solid rgba(255,255,255,.07);margin-top:10px}
+  .q h3{margin:0 0 10px;font-size:16px}
+  .opts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .opt{
+    display:flex;align-items:center;gap:8px;background:#0c1426;border:1px solid rgba(255,255,255,.08);
+    border-radius:12px;padding:10px;cursor:pointer;transition:transform .05s ease,border-color .15s ease
+  }
+  .opt:hover{transform:translateY(-1px);border-color:var(--primary)}
+  input[type="radio"]{accent-color:var(--primary);transform:scale(1.12)}
+  .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  button{
+    background:var(--primary);color:white;border:0;padding:12px 16px;border-radius:12px;
+    font-weight:800;letter-spacing:.3px;cursor:pointer;transition:filter .15s ease, transform .06s ease;
+    box-shadow:0 6px 18px var(--ring)
+  }
+  button:hover{filter:brightness(1.05)} button:active{transform:translateY(1px)}
+  .ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--ink);box-shadow:none}
+  .danger{background:var(--danger)}
+  .error{color:#fecaca;margin-top:8px;display:none}
+  .hidden{display:none}
+  .result{
+    margin-top:18px;padding:16px;border-radius:14px;background:#0b1428;border:1px solid rgba(255,255,255,.08)
+  }
+  .grid-2{display:grid;grid-template-columns:1fr;gap:12px}
+  @media (min-width:760px){.grid-2{grid-template-columns:1fr 1fr}}
+  .tag{display:inline-block;background:#0d1a33;border:1px solid rgba(255,255,255,.06);padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted)}
+  .score{font-size:28px;font-weight:900}
+  .chip{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:4px 8px;font-size:12px;border:1px solid rgba(255,255,255,.1)}
+  details summary{cursor:pointer;user-select:none;margin-top:10px}
+  .ex{color:#9dd2ff}
+  footer{color:var(--muted);font-size:12px;margin-top:14px}
+  a.link{color:#bfdbfe;text-decoration:underline dotted}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>IQ-Style Logic Quiz</h1>
+      <p class="sub">20 multiple-choice puzzles · ~5–8 mins</p>
+      <span class="badge">⚡ Runs fully offline</span>
+      <div class="disclaimer">
+        ⚠️ This is <b>educational</b> only (not standardized or clinical). It measures how you did on these puzzles, today.
+      </div>
+
+      <div class="progress">
+        <div id="progressText">Answered 0 / 20</div>
+        <div class="bar" aria-hidden="true"><span id="progressBar"></span></div>
+      </div>
+
+      <form id="quiz" novalidate></form>
+
+      <div class="btns">
+        <button id="submitBtn" type="button">Calculate Score</button>
+        <button id="reviewBtn" type="button" class="ghost">Show Answer Key</button>
+        <button id="shareBtn" type="button" class="ghost">Copy Share Link</button>
+        <button id="resetBtn" type="button" class="ghost">Reset</button>
+        <button id="printBtn" type="button" class="ghost">Print</button>
+      </div>
+      <div id="error" class="error">Please answer every question before continuing.</div>
+
+      <div id="result" class="result hidden" aria-live="polite"></div>
+
+      <footer>
+        Higher scores mean you solved more of these specific puzzles. If you want a formal IQ measure, that requires a standardized assessment with a qualified professional.
+      </footer>
+    </div>
+  </div>
+
+<script>
+  // ————————— Item bank —————————
+  // Each item: { q: "text", choices: [...], answer: index, explain: "why" }
+  const ITEMS = [
+    { q:"2, 6, 12, 20, ?", choices:["24","28","30","32"], answer:2, explain:"Differences +4, +6, +8 → next +10 → 20+10=30." },
+    { q:"Odd one out:", choices:["Circle","Sphere","Cube","Cylinder"], answer:0, explain:"Circle is 2D; the others are 3D solids." },
+    { q:"Which is NOT an anagram of LISTEN?", choices:["Tinsel","Inlets","Silentt","Enlist"], answer:2, explain:"‘Silentt’ has an extra T; the others are valid anagrams." },
+    { q:"A, C, F, J, O, ?", choices:["Q","R","S","U"], answer:3, explain:"Jumps +2,+3,+4,+5 → next +6: O→U." },
+    { q:"Caesar shift +1: TIGER → ?", choices:["UJHFS","UHIFS","UJIFS","UJFGS"], answer:0, explain:"Each letter +1: T→U, I→J, G→H, E→F, R→S." },
+    { q:"If 3²→10, 5²→26, 7²→50, then 9²→ ?", choices:["81","82","90","98"], answer:1, explain:"Pattern: n²+1 → 9²+1 = 82." },
+    { q:"Finger : Hand :: Leaf : ___", choices:["Branch","Root","Tree","Forest"], answer:2, explain:"A finger is part of a hand; a leaf is part of a tree." },
+    { q:"1, 1, 2, 3, 5, 8, ?", choices:["11","12","13","15"], answer:2, explain:"Fibonacci: next = 5+8 = 13." },
+    { q:"How many squares are in a 3×3 grid (all sizes)?", choices:["9","12","13","14"], answer:3, explain:"9 (1×1) + 4 (2×2) + 1 (3×3) = 14." },
+    { q:"7, 14, 12, 24, 22, 44, ?", choices:["42","46","48","66"], answer:0, explain:"×2, −2 repeating → after 44, subtract 2 → 42." },
+    { q:"All Bloops are Razzies. All Razzies are Lazzies. Therefore all Bloops are Lazzies.", choices:["True","False","Cannot be determined"], answer:0, explain:"Transitive: B⊆R and R⊆L ⇒ B⊆L." },
+    { q:"4, 9, 16, 25, ?", choices:["30","32","36","40"], answer:2, explain:"Perfect squares: 2²,3²,4²,5², next 6²=36." },
+    { q:"Mon, Thu, Sun, Wed, ?", choices:["Sat","Tue","Fri","Mon"], answer:0, explain:"Advance 3 days each step → next is Saturday." },
+    { q:"Complete: A D G J ? ?", choices:["K N","L N","M P","N R"], answer:2, explain:"+3 letters each → M, P." },
+    { q:"If x = 2, compute 2x + 2^x", choices:["6","8","10","12"], answer:1, explain:"2·2 + 2² = 4 + 4 = 8." },
+    { q:"Which word fits BOTH: ___board and ___walk ?", choices:["Side","Skate","Air","Over"], answer:0, explain:"Sideboard and sidewalk are common words." },
+    { q:"Odd one out: 81, 64, 49, 36, 25, 13", choices:["13","25","36","49"], answer:0, explain:"All are perfect squares except 13." },
+    { q:"All Pims are Roms. Some Roms are Teks. Therefore some Pims are Teks.", choices:["True","False","Cannot be determined"], answer:2, explain:"Subset could miss the overlap; not guaranteed." },
+    { q:"Angle between hour and minute hands at 3:00", choices:["0°","45°","90°","120°"], answer:2, explain:"Minute at 12, hour at 3 → 90°." },
+    { q:"Letter positions concatenated: CAT → 3120. What is DOG?", choices:["4157","497","1547","157"], answer:0, explain:"D=4, O=15, G=7 → 4157." }
+  ];
+
+  // ————————— DOM —————————
+  const form = document.getElementById("quiz");
+  const resultBox = document.getElementById("result");
+  const errorBox = document.getElementById("error");
+  const progressText = document.getElementById("progressText");
+  const progressBar = document.getElementById("progressBar");
+  const reviewBtn = document.getElementById("reviewBtn");
+  const shareBtn = document.getElementById("shareBtn");
+
+  // ————————— Render —————————
+  function makeId(i, v){ return `q${i}_v${v}`; }
+
+  function render(){
+    form.innerHTML = "";
+    ITEMS.forEach((it, i)=>{
+      const field = document.createElement("fieldset");
+      field.className = "q";
+      field.innerHTML = `
+        <legend><h3>${i+1}. ${it.q}</h3></legend>
+        <div class="opts" role="radiogroup" aria-label="Question ${i+1}">
+          ${it.choices.map((c, idx)=>`
+            <label class="opt" for="${makeId(i,idx)}">
+              <input type="radio" id="${makeId(i,idx)}" name="q${i}" value="${idx}" />
+              <span>${c}</span>
+            </label>
+          `).join("")}
+        </div>
+      `;
+      form.appendChild(field);
+    });
+  }
+  render();
+
+  // ————————— Helpers —————————
+  function getAnswers(){
+    const values = [];
+    for(let i=0;i<ITEMS.length;i++){
+      const sel = form.querySelector(`input[name="q${i}"]:checked`);
+      values.push(sel ? Number(sel.value) : null);
+    }
+    return values;
+  }
+
+  function updateProgress(){
+    const answers = getAnswers();
+    const done = answers.filter(v => v !== null).length;
+    progressText.textContent = `Answered ${done} / ${ITEMS.length}`;
+    const pct = Math.round((done / ITEMS.length) * 100);
+    progressBar.style.width = pct + "%";
+  }
+  form.addEventListener("change", updateProgress);
+  updateProgress();
+
+  function firstMissingIndex(){
+    const answers = getAnswers();
+    return answers.findIndex(v => v === null);
+  }
+
+  function scrollToQuestion(i){
+    const target = form.querySelectorAll(".q")[i];
+    if (target){
+      target.scrollIntoView({behavior:"smooth", block:"center"});
+      target.style.outline = "2px solid #ef4444";
+      setTimeout(()=> target.style.outline = "none", 1200);
+    }
+  }
+
+  // ————————— Scoring & display —————————
+  function estimateIQ(score, max){
+    // playful estimate mapped ~70..145 (purely for fun!)
+    return Math.round(70 + (score / max) * 75);
+  }
+  function band(score, max){
+    const p = score / max;
+    if (p <= 0.3) return {name:"Below Typical", color:"#f87171"};
+    if (p <= 0.55) return {name:"Typical", color:"#60a5fa"};
+    if (p <= 0.8) return {name:"Above Typical", color:"#22c55e"};
+    return {name:"Exceptional", color:"#fbbf24"};
+  }
+
+  function showResult(score, picks){
+    const max = ITEMS.length;
+    const pct = Math.round((score / max) * 100);
+    const iqish = estimateIQ(score, max);
+    const b = band(score, max);
+
+    let reviewHTML = `
+      <details id="review"><summary>Review answers</summary>
+        <ol>
+          ${ITEMS.map((it, i)=>{
+            const your = picks[i];
+            const correct = it.answer;
+            const ok = your === correct;
+            const youText = your===null ? "<i>no answer</i>" : ITEMS[i].choices[your];
+            return `
+              <li style="margin:8px 0">
+                <div><b>${it.q}</b></div>
+                <div>Your answer: <span style="color:${ok?'#34d399':'#fca5a5'}">${youText}</span></div>
+                <div>Correct: <b class="ex">${ITEMS[i].choices[correct]}</b></div>
+                <div style="color:#9aa3b2;font-size:13px">${it.explain}</div>
+              </li>`;
+          }).join("")}
+        </ol>
+      </details>
+    `;
+
+    resultBox.classList.remove("hidden");
+    resultBox.innerHTML = `
+      <div class="grid-2">
+        <div>
+          <div class="tag">Your score</div>
+          <div class="score" style="color:${b.color}">${score} / ${max}</div>
+          <div class="tag" style="margin-top:8px">${pct}% correct</div>
+          <p style="margin:10px 0 0"><span class="chip" style="border-color:${b.color};color:${b.color}">${b.name}</span></p>
+        </div>
+        <div>
+          <div class="tag">For-fun estimate</div>
+          <p style="margin:6px 0 8px">“IQ-ish”: <b>${iqish}</b> (just a playful mapping, not a standardized IQ score)</p>
+          <ul style="margin:0 0 10px 18px">
+            <li>This quiz checks reasoning patterns (sequences, analogies, logic).</li>
+            <li>Real IQ requires proctored, validated instruments and norms.</li>
+          </ul>
+        </div>
+      </div>
+      ${reviewHTML}
+    `;
+    resultBox.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  // ————————— Buttons —————————
+  document.getElementById("submitBtn").addEventListener("click", () => {
+    errorBox.style.display = "none";
+    const miss = firstMissingIndex();
+    if (miss !== -1){
+      errorBox.style.display = "block";
+      scrollToQuestion(miss);
+      return;
+    }
+    const picks = getAnswers();
+    let score = 0;
+    picks.forEach((p,i)=>{ if (p === ITEMS[i].answer) score++; });
+
+    // save for sharing / review
+    window.__IQT_LAST = { score, picks };
+    showResult(score, picks);
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    form.querySelectorAll('input[type="radio"]').forEach(i=> i.checked = false);
+    resultBox.classList.add("hidden");
+    resultBox.innerHTML = "";
+    errorBox.style.display = "none";
+    updateProgress();
+    window.__IQT_LAST = null;
+    history.replaceState(null, "", location.pathname); // clear hash
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  document.getElementById("reviewBtn").addEventListener("click", () => {
+    const details = document.getElementById("review");
+    if (!details){
+      errorBox.textContent = "Calculate your score first, then open the answer key.";
+      errorBox.style.display = "block";
+      return;
+    }
+    details.open = true;
+    details.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  // Shareable link (encodes only total score, not your chosen answers)
+  shareBtn.addEventListener("click", async () => {
+    if (!window.__IQT_LAST){
+      errorBox.textContent = "Calculate your score first, then share.";
+      errorBox.style.display = "block";
+      return;
+    }
+    const { score } = window.__IQT_LAST;
+    const hash = `#iqt:v=1;s=${score}`;
+    const url = location.origin + location.pathname + hash;
+    try{
+      await navigator.clipboard.writeText(url);
+      shareBtn.textContent = "Link copied ✅";
+      setTimeout(()=> shareBtn.textContent = "Copy Share Link", 1500);
+    }catch{
+      prompt("Copy your results link:", url);
+    }
+  });
+
+  // If page opened with a results hash, show summary header.
+  (function readHash(){
+    if (!location.hash.startsWith("#iqt:")) return;
+    const parts = Object.fromEntries(
+      location.hash.replace("#iqt:","").split(";").map(kv => kv.split("="))
+    );
+    const score = Number(parts.s||0);
+    if (Number.isFinite(score) && score>=0 && score<=ITEMS.length){
+      window.__IQT_LAST = { score, picks: Array(ITEMS.length).fill(null) };
+      showResult(score, window.__IQT_LAST.picks);
+    }
+  })();
+</script>
+</body>
+</html>
